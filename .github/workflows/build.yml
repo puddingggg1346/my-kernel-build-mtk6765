@@ -1,4 +1,4 @@
-name: Build Kernel with IPC_NS
+name: Build Kernel with IPC_NS (Clean Config)
 
 on:
   workflow_dispatch:
@@ -25,11 +25,10 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 使用你设备导出的配置
-        gunzip -c ../config.gz > .config
-        # 开启 IPC namespace
+        # 生成一个干净的 arm64 默认配置
+        make defconfig
+        # 只开启我们需要的 IPC namespace
         scripts/config --file .config -e CONFIG_IPC_NS
-        # 解决可能出现的旧配置依赖问题
         make olddefconfig
 
     - name: Build kernel
