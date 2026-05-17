@@ -1,0 +1,47 @@
+name: Build Kernel with IPC_NS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Download Xiaomi MT6765 kernel source
+      run: |
+        git clone --depth=1 https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765.git kernel
+
+    - name: Setup build tools
+      run: |
+        sudo apt update
+        sudo apt install -y git make gcc-aarch64-linux-gnu
+
+    - name: Configure kernel
+      run: |
+        cd kernel
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        # 使用内核源码自带的默认配置，而不是你上传的 config.gz
+        make cactus_defconfig  # 尝试为你的设备 (cactus/cereus) 准备的默认配置
+        # 开启 IPC namespace
+        scripts/config --file .config -e CONFIG_IPC_NS
+        # 可选：开启命名空间的相关选项
+        scripts/config --file .config -e CONFIG_IPC_NS_OPT
+        make olddefconfig
+
+    - name: Build kernel
+      run: |
+        cd kernel
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        make -j$(nproc)
+
+    - name: Upload kernel image
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-image
+        path: kernel/arch/arm64/boot/Image.gz-dtb
