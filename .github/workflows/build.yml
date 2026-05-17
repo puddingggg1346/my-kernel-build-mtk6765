@@ -31,52 +31,40 @@ jobs:
         # 开启 IPC namespace
         scripts/config --file .config -e CONFIG_IPC_NS
         
+        # 关闭设备树编译（避免 dtbo_check 错误）
+        scripts/config --file .config -d CONFIG_OF
+        scripts/config --file .config -d CONFIG_OF_EARLY_FLATTREE
+        
         # 关闭摄像头相关
         scripts/config --file .config -d CONFIG_MTK_IMGSENSOR
         scripts/config --file .config -d CONFIG_MTK_IMGSENSOR_DRV
-        scripts/config --file .config -d CONFIG_MTK_IMGSENSOR_DEBUG
         scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK
-        scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK_ISP
-        scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK_ISP_MAIN
-        scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK_ISP_SUB
-        scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK_MDP
         
         # 关闭音频/麦克风相关
         scripts/config --file .config -d CONFIG_SND_SOC_MTK
         scripts/config --file .config -d CONFIG_SND_SOC_MT6765
-        scripts/config --file .config -d CONFIG_SND_SOC_MTK_BTCVSD
-        scripts/config --file .config -d CONFIG_SND_SOC_MTK_DMIC
-        scripts/config --file .config -d CONFIG_SND_SOC_MTK_GENERIC
         
-        # 关闭陀螺仪/传感器相关
+        # 关闭传感器相关
         scripts/config --file .config -d CONFIG_MTK_SENSOR
         scripts/config --file .config -d CONFIG_MTK_GYROSCOPE
-        scripts/config --file .config -d CONFIG_MTK_ACCELEROMETER
-        scripts/config --file .config -d CONFIG_MTK_MAGNETOMETER
-        scripts/config --file .config -d CONFIG_INPUT_MISC
-        scripts/config --file .config -d CONFIG_IIO
         
         # 关闭指纹相关
         scripts/config --file .config -d CONFIG_FINGERPRINT
-        scripts/config --file .config -d CONFIG_FPC_FINGERPRINT
-        scripts/config --file .config -d CONFIG_GOODIX_FINGERPRINT
         
-        # 可选：关闭其他可能有问题的不必要驱动
-        scripts/config --file .config -d CONFIG_MTK_GPU_SWPM
-        scripts/config --file .config -d CONFIG_MTK_HW_FDE
-        scripts/config --file .config -d CONFIG_MTK_HDMI_SUPPORT
+        # 关闭 WiFi/蓝牙
         scripts/config --file .config -d CONFIG_MTK_WIFI
         scripts/config --file .config -d CONFIG_MTK_BT
         
         # 重新解决依赖
         make olddefconfig
 
-    - name: Build kernel
+    - name: Build kernel (skip dtbs)
       run: |
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        make -j$(nproc)
+        # 只编译内核镜像，不编译设备树
+        make -j$(nproc) Image.gz-dtb
 
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
