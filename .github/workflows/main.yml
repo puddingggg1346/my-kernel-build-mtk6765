@@ -1,0 +1,48 @@
+name: Build Kernel with IPC_NS
+
+on:
+  push:
+    paths:
+      - 'config.gz'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Download ALPS kernel source
+      run: |
+        git clone --depth=1 https://github.com/KrutosVIP/generic_kernel_mediatek_alps.git kernel
+
+    - name: Setup build tools
+      run: |
+        sudo apt update
+        sudo apt install -y git make gcc-aarch64-linux-gnu
+
+    - name: Configure kernel
+      run: |
+        cd kernel
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        # 使用你上传的配置文件
+        gunzip -c ../config.gz > .config
+        # 开启 IPC namespace
+        scripts/config --file .config -e CONFIG_IPC_NS
+        make olddefconfig
+
+    - name: Build kernel
+      run: |
+        cd kernel
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-gnu-
+        make -j$(nproc)
+
+    - name: Upload kernel image
+      uses: actions/upload-artifact@v4
+      with:
+        name: kernel-image
+        path: kernel/arch/arm64/boot/Image.gz-dtb
