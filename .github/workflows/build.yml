@@ -1,4 +1,4 @@
-name: Build Kernel with IPC_NS (Minimal)
+name: Build ALPS Kernel with IPC_NS
 
 on:
   workflow_dispatch:
@@ -8,12 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Download Xiaomi MT6765 kernel source
+    - name: Checkout ALPS kernel source
       run: |
-        git clone --depth=1 https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765.git kernel
+        git clone --depth=1 https://github.com/KrutosVIP/generic_kernel_mediatek_alps.git kernel
 
     - name: Setup build tools
       run: |
@@ -25,49 +22,22 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 使用你设备导出的配置
+        # 关键：使用你手机导出的完美配置文件
         gunzip -c ../config.gz > .config
-        
-        # 开启 IPC namespace
+        # 核心改动：仅开启这一个选项
         scripts/config --file .config -e CONFIG_IPC_NS
-        
-        # 关闭设备树编译（避免 dtbo_check 错误）
-        scripts/config --file .config -d CONFIG_OF
-        scripts/config --file .config -d CONFIG_OF_EARLY_FLATTREE
-        
-        # 关闭摄像头相关
-        scripts/config --file .config -d CONFIG_MTK_IMGSENSOR
-        scripts/config --file .config -d CONFIG_MTK_IMGSENSOR_DRV
-        scripts/config --file .config -d CONFIG_VIDEO_MEDIATEK
-        
-        # 关闭音频/麦克风相关
-        scripts/config --file .config -d CONFIG_SND_SOC_MTK
-        scripts/config --file .config -d CONFIG_SND_SOC_MT6765
-        
-        # 关闭传感器相关
-        scripts/config --file .config -d CONFIG_MTK_SENSOR
-        scripts/config --file .config -d CONFIG_MTK_GYROSCOPE
-        
-        # 关闭指纹相关
-        scripts/config --file .config -d CONFIG_FINGERPRINT
-        
-        # 关闭 WiFi/蓝牙
-        scripts/config --file .config -d CONFIG_MTK_WIFI
-        scripts/config --file .config -d CONFIG_MTK_BT
-        
-        # 重新解决依赖
+        # 优雅地解决新内核配置项的依赖问题
         make olddefconfig
 
-    - name: Build kernel (skip dtbs)
+    - name: Build kernel
       run: |
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 只编译内核镜像，不编译设备树
-        make -j$(nproc) Image.gz-dtb
+        make -j$(nproc) Image.gz
 
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
       with:
-        name: kernel-image
-        path: kernel/arch/arm64/boot/Image.gz-dtb
+        name: alps-kernel
+        path: kernel/arch/arm64/boot/Image.gz
