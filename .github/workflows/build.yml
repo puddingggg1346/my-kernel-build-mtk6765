@@ -1,4 +1,4 @@
-name: Build MT6765 Kernel (Final Attempt - Verified Source)
+name: Build Debug MT6765 Kernel with Ramoops
 
 on:
   workflow_dispatch:
@@ -22,10 +22,35 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 使用这个仓库已知的、可用的默认配置 (cactus_defconfig)
+        
+        # 使用红米6A的配置作为基础
         make cactus_defconfig
+        
         # 开启 IPC namespace
         scripts/config --file .config -e CONFIG_IPC_NS
+        
+        # --- 开启所有调试和后路相关的配置 ---
+        # 1. 内核调试支持
+        scripts/config --file .config -e CONFIG_DEBUG_KERNEL
+        scripts/config --file .config -e CONFIG_DEBUG_INFO
+        
+        # 2. pstore 和 ramoops (崩溃日志)
+        scripts/config --file .config -e CONFIG_PSTORE
+        scripts/config --file .config -e CONFIG_PSTORE_CONSOLE
+        scripts/config --file .config -e CONFIG_PSTORE_RAM
+        scripts/config --file .config -e CONFIG_RAMOOPS
+        scripts/config --file .config -e CONFIG_PSTORE_ZONE
+        scripts/config --file .config -e CONFIG_PSTORE_BLK
+        
+        # 3. 早期打印和串口调试
+        scripts/config --file .config -e CONFIG_EARLY_PRINTK
+        scripts/config --file .config -e CONFIG_DEBUG_LL
+        scripts/config --file .config -e CONFIG_DEBUG_LL_UART_8250
+        
+        # 4. 关闭可能导致启动失败的配置
+        scripts/config --file .config -d CONFIG_MTK_CCU
+        
+        # 重新解决依赖
         make olddefconfig
 
     - name: Build kernel
@@ -38,5 +63,5 @@ jobs:
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
       with:
-        name: mt6765-kernel-final
+        name: mt6765-kernel-debug
         path: kernel/arch/arm64/boot/Image.gz
