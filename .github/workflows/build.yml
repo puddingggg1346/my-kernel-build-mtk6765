@@ -1,4 +1,4 @@
-name: Build ALPS Kernel with IPC_NS (Fix Inline)
+name: Build Mainline MT6765 Kernel (mt6765-next)
 
 on:
   workflow_dispatch:
@@ -8,12 +8,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout your repository
+    - name: Checkout your config repository
       uses: actions/checkout@v4
 
-    - name: Checkout ALPS kernel source
+    # 关键改动：直接使用最新的 mt6765-next 分支
+    - name: Checkout Mainline MT6765 Kernel (mt6765-next)
       run: |
-        git clone --depth=1 https://github.com/KrutosVIP/generic_kernel_mediatek_alps.git kernel
+        git clone --depth=1 --branch mt6765-next https://github.com/adomerle/linux-mt6765.git kernel
 
     - name: Setup build tools
       run: |
@@ -25,16 +26,25 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
+        # 1. 复制你的手机配置文件作为基础
         cp ../config.gz .
         gunzip config.gz
         mv config .config
+        # 2. 只添加我们需要的选项
         scripts/config --file .config -e CONFIG_IPC_NS
+        # 3. 优雅地解决配置依赖
         make olddefconfig
 
-    - name: Build kernel with relaxed inlining
+    - name: Build kernel
       run: |
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 关键修改：添加编译器参数，禁用可能导致错误的严格内联
-        make -j$(nproc) Image.gz KBUILD_CFLAGS="-fno-inline-functions-called-once"
+        # 编译生成内核镜像
+        make -j$(nproc) Image.gz
+
+    - name: Upload kernel image
+      uses: actions/upload-artifact@v4
+      with:
+        name: mainline-mt6765-kernel
+        path: kernel/arch/arm64/boot/Image.gz
