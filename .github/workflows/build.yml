@@ -1,4 +1,4 @@
-name: Build Mainline MT6765 Kernel (mt6765-next)
+name: Build Final Kernel with xiaomi-mt6765 Source
 
 on:
   workflow_dispatch:
@@ -8,13 +8,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout your config repository
-      uses: actions/checkout@v4
-
-    # 关键改动：直接使用最新的 mt6765-next 分支
-    - name: Checkout Mainline MT6765 Kernel (mt6765-next)
+    - name: Checkout kernel source
       run: |
-        git clone --depth=1 --branch mt6765-next https://github.com/adomerle/linux-mt6765.git kernel
+        git clone --depth=1 https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765.git kernel
 
     - name: Setup build tools
       run: |
@@ -26,13 +22,10 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 1. 复制你的手机配置文件作为基础
-        cp ../config.gz .
-        gunzip config.gz
-        mv config .config
-        # 2. 只添加我们需要的选项
+        # 使用红米6的默认配置
+        make cereus_defconfig
+        # 只开启 IPC namespace
         scripts/config --file .config -e CONFIG_IPC_NS
-        # 3. 优雅地解决配置依赖
         make olddefconfig
 
     - name: Build kernel
@@ -40,11 +33,10 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 编译生成内核镜像
         make -j$(nproc) Image.gz
 
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
       with:
-        name: mainline-mt6765-kernel
+        name: xiaomi-kernel
         path: kernel/arch/arm64/boot/Image.gz
