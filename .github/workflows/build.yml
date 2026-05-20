@@ -1,4 +1,4 @@
-name: Build Final Kernel with xiaomi-mt6765 Source
+name: Build MT6765 Kernel (Final Attempt - Verified Source)
 
 on:
   workflow_dispatch:
@@ -10,7 +10,7 @@ jobs:
     steps:
     - name: Checkout kernel source
       run: |
-        git clone --depth=1 https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765.git kernel
+        git clone --depth=1 -b lineage-18.0 https://github.com/xiaomi-mt6765/android_kernel_xiaomi_mt6765.git kernel
 
     - name: Setup build tools
       run: |
@@ -22,9 +22,9 @@ jobs:
         cd kernel
         export ARCH=arm64
         export CROSS_COMPILE=aarch64-linux-gnu-
-        # 使用红米6的默认配置
-        make cereus_defconfig
-        # 只开启 IPC namespace
+        # 使用这个仓库已知的、可用的默认配置 (cactus_defconfig)
+        make cactus_defconfig
+        # 开启 IPC namespace
         scripts/config --file .config -e CONFIG_IPC_NS
         make olddefconfig
 
@@ -38,5 +38,5 @@ jobs:
     - name: Upload kernel image
       uses: actions/upload-artifact@v4
       with:
-        name: xiaomi-kernel
+        name: mt6765-kernel-final
         path: kernel/arch/arm64/boot/Image.gz
